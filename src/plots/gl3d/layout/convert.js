@@ -152,6 +152,9 @@ proto.merge = function(sceneLayout) {
 
 
 function createAxesOptions(plotlyOptions) {
+
+    console.log("plotlyOptions=", plotlyOptions);
+
     var result = new AxesOptions();
     result.merge(plotlyOptions);
     return result;

@@ -541,10 +541,23 @@ axes.calcTicks = function calcTicks(ax) {
     ax._tmin = axes.tickFirst(ax);
 
     // add a tiny bit so we get ticks which may have rounded out
-    var startTick = rng[0] * 1.0001 - rng[1] * 0.0001;
-    var endTick = rng[1] * 1.0001 - rng[0] * 0.0001;
+    var startTick = rng[0] * 1.000001 - rng[1] * 0.000001;
+    var endTick = rng[1] * 1.000001 - rng[0] * 0.000001;
+    var extraPrecision = false;
+
+    if(ax.type === 'date') {
+        var timeOffset = 5 * ONEHOUR; // convert local time
+        ax._tmin += timeOffset;
+        startTick += timeOffset;
+        endTick += timeOffset;
+
+        if(ax.dtick < 6 * ONEHOUR) { // enable extra precision for dates if the range is smaller than certain amount
+            extraPrecision = true;
+        }
+    }
+
     // check for reversed axis
-    var axrev = (rng[1] < rng[0]);
+    var axrev = (endTick < startTick);
 
     // No visible ticks? Quit.
     // I've only seen this on category axes with all categories off the edge.
@@ -559,6 +572,7 @@ axes.calcTicks = function calcTicks(ax) {
 
     var xPrevious = null;
     var maxTicks = Math.max(1000, ax._length || 0);
+
     for(var x = ax._tmin;
             (axrev) ? (x >= endTick) : (x <= endTick);
             x = axes.tickIncrement(x, ax.dtick, axrev, ax.calendar)) {
@@ -572,7 +586,7 @@ axes.calcTicks = function calcTicks(ax) {
 
     // If same angle over a full circle, the last tick vals is a duplicate.
     // TODO must do something similar for angular date axes.
-    if(isAngular(ax) && Math.abs(rng[1] - rng[0]) === 360) {
+    if(isAngular(ax) && Math.abs(endTick - startTick) === 360) {
         vals.pop();
     }
 
@@ -588,7 +602,11 @@ axes.calcTicks = function calcTicks(ax) {
     ax._inCalcTicks = true;
 
     var ticksOut = new Array(vals.length);
-    for(var i = 0; i < vals.length; i++) ticksOut[i] = axes.tickText(ax, vals[i]);
+    for(var i = 0; i < vals.length; i++) {
+        var tick = axes.tickText(ax, vals[i], false, extraPrecision);
+        console.log("tick=", tick);
+        ticksOut[i] = tick;
+    }
 
     ax._inCalcTicks = false;
 
@@ -596,12 +614,15 @@ axes.calcTicks = function calcTicks(ax) {
 };
 
 function arrayTicks(ax) {
+
+    console.log("!!!!!!!!!!! arrayTicks is called !!!!!!!!!!!");
+
     var vals = ax.tickvals,
         text = ax.ticktext,
         ticksOut = new Array(vals.length),
         rng = Lib.simpleMap(ax.range, ax.r2l),
-        r0expanded = rng[0] * 1.0001 - rng[1] * 0.0001,
-        r1expanded = rng[1] * 1.0001 - rng[0] * 0.0001,
+        r0expanded = rng[0] * 1.000001 - rng[1] * 0.000001,
+        r1expanded = rng[1] * 1.000001 - rng[0] * 0.000001,
         tickMin = Math.min(r0expanded, r1expanded),
         tickMax = Math.max(r0expanded, r1expanded),
         vali,
@@ -624,8 +645,8 @@ function arrayTicks(ax) {
     for(i = 0; i < vals.length; i++) {
         vali = tickVal2l(vals[i]);
         if(vali > tickMin && vali < tickMax) {
-            if(text[i] === undefined) ticksOut[j] = axes.tickText(ax, vali);
-            else ticksOut[j] = tickTextObj(ax, vali, String(text[i]));
+            if(text[i] === undefined) ticksOut[j] = axes.tickText(ax, vali, false, true);
+            else ticksOut[j] = tickTextObj(ax, vali, String(text[i]), true);
             j++;
         }
     }
@@ -669,6 +690,8 @@ function roundDTick(roughDTick, base, roundingSet) {
 //          D1 shows all digits, D2 shows 2 and 5
 axes.autoTicks = function(ax, roughDTick) {
     var base;
+
+    console.log("autoTicks is called. roughDTick=", roughDTick);
 
     function getBase(v) {
         return Math.pow(v, Math.floor(Math.log(roughDTick) / Math.LN10));
@@ -874,7 +897,7 @@ axes.tickFirst = function(ax) {
         sRound = axrev ? Math.floor : Math.ceil,
         // add a tiny extra bit to make sure we get ticks
         // that may have been rounded out
-        r0 = rng[0] * 1.0001 - rng[1] * 0.0001,
+        r0 = rng[0] * 1.000001 - rng[1] * 0.000001,
         dtick = ax.dtick,
         tick0 = r2l(ax.tick0);
 
@@ -938,11 +961,10 @@ axes.tickFirst = function(ax) {
 // ax is the axis layout, x is the tick value
 // hover is a (truthy) flag for whether to show numbers with a bit
 // more precision for hovertext
-axes.tickText = function(ax, x, hover) {
+axes.tickText = function(ax, x, hover, extraPrecision) {
     var out = tickTextObj(ax, x),
         hideexp,
         arrayMode = ax.tickmode === 'array',
-        extraPrecision = hover || arrayMode,
         i,
         tickVal2l = ax.type === 'category' ? ax.d2l_noadd : ax.d2l;
 
@@ -950,7 +972,11 @@ axes.tickText = function(ax, x, hover) {
         var rng = Lib.simpleMap(ax.range, ax.r2l),
             minDiff = Math.abs(rng[1] - rng[0]) / 10000;
         for(i = 0; i < ax.ticktext.length; i++) {
-            if(Math.abs(x - tickVal2l(ax.tickvals[i])) < minDiff) break;
+            if(Math.abs(x - tickVal2l(ax.tickvals[i])) < minDiff) {
+
+                console.log("============ calling break! ===========");
+                break;
+            }
         }
         if(i < ax.ticktext.length) {
             out.text = String(ax.ticktext[i]);
@@ -1009,7 +1035,7 @@ axes.hoverLabelText = function(ax, val, val2) {
     }
 
     var logOffScale = (ax.type === 'log' && val <= 0);
-    var tx = axes.tickText(ax, ax.c2l(logOffScale ? -val : val), 'hover').text;
+    var tx = axes.tickText(ax, ax.c2l(logOffScale ? -val : val), 'hover', true).text;
 
     if(logOffScale) {
         return val === 0 ? '0' : MINUS_SIGN + tx;
@@ -1037,8 +1063,18 @@ function tickTextObj(ax, x, text) {
 }
 
 function formatDate(ax, out, hover, extraPrecision) {
+
+    console.log("ax=", ax);
+
+    console.log("ax._tickround=", ax._tickround);
+
+//ax._tickround="S";
+//extraPrecision=true;
+
     var tr = ax._tickround,
         fmt = (hover && ax.hoverformat) || axes.getTickFormat(ax);
+
+    console.log(">>>>>>>>>>> fmt='" + fmt + "'");
 
     if(extraPrecision) {
         // second or sub-second precision: extra always shows max digits.
@@ -1046,6 +1082,9 @@ function formatDate(ax, out, hover, extraPrecision) {
         if(isNumeric(tr)) tr = 4;
         else tr = {y: 'm', m: 'd', d: 'M', M: 'S', S: 4}[tr];
     }
+
+    console.log("ax._dateFormat=", ax._dateFormat);
+    console.log("ax._extraFormat=", ax._extraFormat);
 
     var dateStr = Lib.formatDate(out.x, fmt, tr, ax._dateFormat, ax.calendar, ax._extraFormat),
         headStr;

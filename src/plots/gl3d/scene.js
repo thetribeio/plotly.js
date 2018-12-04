@@ -304,6 +304,9 @@ function Scene(options, fullLayout) {
     /*
      * Move this to calc step? Why does it work here?
      */
+
+        console.log("fullLayout[", this.id, "]=", fullLayout[this.id]);
+
     this.axesOptions = createAxesOptions(fullLayout[this.id]);
     this.spikeOptions = createSpikeOptions(fullLayout[this.id]);
     this.container = sceneContainer;
