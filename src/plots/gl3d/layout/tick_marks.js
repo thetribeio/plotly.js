@@ -42,27 +42,13 @@ function computeTickMarks(scene) {
 
     for(var i = 0; i < 3; ++i) {
         var axes = sceneLayout[AXES_NAMES[i]];
-
-        console.log("(glRange[", i, "].hi - glRange[", i, "].lo)=", (glRange[i].hi - glRange[i].lo));
-        console.log("scene.dataScale[", i, "]=", scene.dataScale[i]);
-
         axes._length = (glRange[i].hi - glRange[i].lo) *
             glRange[i].pixelsPerDataUnit / scene.dataScale[i];
-
-        console.log("+++++++++++++++++++++++++++++");
-        console.log("axes._length=", axes._length);
-        console.log("+++++++++++++++++++++++++++++");
-
         if(Math.abs(axes._length) === Infinity ||
            isNaN(axes._length)) {
             ticks[i] = [];
         } else {
             axes._input_range = axes.range.slice();
-
-            console.log("*************************************");
-            console.log("axes._input_range=", axes._input_range);
-            console.log("*************************************");
-
             axes.range[0] = (glRange[i].lo) / scene.dataScale[i];
             axes.range[1] = (glRange[i].hi) / scene.dataScale[i];
             axes._m = 1.0 / (scene.dataScale[i] * glRange[i].pixelsPerDataUnit);
@@ -82,9 +68,6 @@ function computeTickMarks(scene) {
                 Axes.autoTicks(axes, Math.abs(axes.range[1] - axes.range[0]) / nticks);
             }
             var dataTicks = Axes.calcTicks(axes);
-
-            console.log("BEFORE: dataTicks=", dataTicks);
-
             for(var j = 0; j < dataTicks.length; ++j) {
                 dataTicks[j].x = dataTicks[j].x * scene.dataScale[i];
 
@@ -94,10 +77,6 @@ function computeTickMarks(scene) {
                 }
             }
             ticks[i] = dataTicks;
-
-            console.log("AFTER: dataTicks=", dataTicks);
-
-
             axes.tickmode = tickModeCached;
         }
     }

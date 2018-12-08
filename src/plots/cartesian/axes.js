@@ -544,7 +544,7 @@ axes.calcTicks = function calcTicks(ax) {
     var startTick = rng[0] * 1.000001 - rng[1] * 0.000001;
     var endTick = rng[1] * 1.000001 - rng[0] * 0.000001;
     var extraPrecision = false;
-
+/*
     if(ax.type === 'date') {
         var timeOffset = 5 * ONEHOUR; // convert local time
         ax._tmin += timeOffset;
@@ -555,7 +555,7 @@ axes.calcTicks = function calcTicks(ax) {
             extraPrecision = true;
         }
     }
-
+*/
     // check for reversed axis
     var axrev = (endTick < startTick);
 
@@ -604,7 +604,6 @@ axes.calcTicks = function calcTicks(ax) {
     var ticksOut = new Array(vals.length);
     for(var i = 0; i < vals.length; i++) {
         var tick = axes.tickText(ax, vals[i], false, extraPrecision);
-        console.log("tick=", tick);
         ticksOut[i] = tick;
     }
 
@@ -614,9 +613,6 @@ axes.calcTicks = function calcTicks(ax) {
 };
 
 function arrayTicks(ax) {
-
-    console.log("!!!!!!!!!!! arrayTicks is called !!!!!!!!!!!");
-
     var vals = ax.tickvals,
         text = ax.ticktext,
         ticksOut = new Array(vals.length),
@@ -690,9 +686,6 @@ function roundDTick(roughDTick, base, roundingSet) {
 //          D1 shows all digits, D2 shows 2 and 5
 axes.autoTicks = function(ax, roughDTick) {
     var base;
-
-    console.log("autoTicks is called. roughDTick=", roughDTick);
-
     function getBase(v) {
         return Math.pow(v, Math.floor(Math.log(roughDTick) / Math.LN10));
     }
@@ -972,11 +965,7 @@ axes.tickText = function(ax, x, hover, extraPrecision) {
         var rng = Lib.simpleMap(ax.range, ax.r2l),
             minDiff = Math.abs(rng[1] - rng[0]) / 10000;
         for(i = 0; i < ax.ticktext.length; i++) {
-            if(Math.abs(x - tickVal2l(ax.tickvals[i])) < minDiff) {
-
-                console.log("============ calling break! ===========");
-                break;
-            }
+            if(Math.abs(x - tickVal2l(ax.tickvals[i])) < minDiff) break;
         }
         if(i < ax.ticktext.length) {
             out.text = String(ax.ticktext[i]);
@@ -1064,17 +1053,8 @@ function tickTextObj(ax, x, text) {
 
 function formatDate(ax, out, hover, extraPrecision) {
 
-    console.log("ax=", ax);
-
-    console.log("ax._tickround=", ax._tickround);
-
-//ax._tickround="S";
-//extraPrecision=true;
-
     var tr = ax._tickround,
         fmt = (hover && ax.hoverformat) || axes.getTickFormat(ax);
-
-    console.log(">>>>>>>>>>> fmt='" + fmt + "'");
 
     if(extraPrecision) {
         // second or sub-second precision: extra always shows max digits.
@@ -1082,9 +1062,6 @@ function formatDate(ax, out, hover, extraPrecision) {
         if(isNumeric(tr)) tr = 4;
         else tr = {y: 'm', m: 'd', d: 'M', M: 'S', S: 4}[tr];
     }
-
-    console.log("ax._dateFormat=", ax._dateFormat);
-    console.log("ax._extraFormat=", ax._extraFormat);
 
     var dateStr = Lib.formatDate(out.x, fmt, tr, ax._dateFormat, ax.calendar, ax._extraFormat),
         headStr;

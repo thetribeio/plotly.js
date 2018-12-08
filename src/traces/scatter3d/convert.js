@@ -229,13 +229,7 @@ function convertPlotlyOptions(scene, data) {
         // sanitize numbers and apply transforms based on axes.type
         xc = xaxis.d2l(x[i], 0, xcalendar) * scaleFactor[0];
         yc = yaxis.d2l(y[i], 0, ycalendar) * scaleFactor[1];
-
-        //console.log("scaleFactor[2]=", scaleFactor[2]);
-
         zc = zaxis.d2l(z[i], 0, zcalendar) * scaleFactor[2];
-
-        //console.log("zc", zc);
-
         points[i] = [xc, yc, zc];
     }
 
@@ -345,8 +339,6 @@ proto.update = function(data) {
 
     // Save data points
     this.dataPoints = options.position;
-
-    //console.log("this.dataPoints=", this.dataPoints);
 
     lineOptions = {
         gl: gl,

@@ -471,10 +471,6 @@ exports.formatDate = function(x, fmt, tr, formatter, calendar, extraFormat) {
             fmt = extraFormat.dayMonth + '\n' + extraFormat.year;
         }
         else {
-
-            console.log("USING formatTime <<<<<<<<<<");
-
-
             return formatTime(x, tr) + '\n' + modDateFormat(extraFormat.dayMonthYear, x, formatter, calendar);
         }
     }
