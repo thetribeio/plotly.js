@@ -1203,16 +1203,15 @@ function formatCategory(ax, out) {
 function formatMultiCategory(ax, out, hover) {
     var v = Math.round(out.x);
     var cats = ax._categories[v] || [];
-    var tt = cats[1] === undefined ? '' : String(cats[1]);
-    var tt2 = cats[0] === undefined ? '' : String(cats[0]);
+    var values = cats.map((value) => String(value));
 
-    if(hover) {
+    if (hover) {
         // TODO is this what we want?
-        out.text = tt2 + ' - ' + tt;
+        out.text = values.join(' - ');
     } else {
         // setup for secondary labels
-        out.text = tt;
-        out.text2 = tt2;
+        out.categories = values;
+        out.text = values[cats.length - 1];
     }
 }
 
@@ -1619,8 +1618,12 @@ axes.draw = function(gd, arg, opts) {
             plotinfo.yaxislayer.selectAll('.' + ya._id + 'tick').remove();
             plotinfo.xaxislayer.selectAll('.' + xa._id + 'tick2').remove();
             plotinfo.yaxislayer.selectAll('.' + ya._id + 'tick2').remove();
+            plotinfo.xaxislayer.selectAll('.' + xa._id + 'tick3').remove();
+            plotinfo.yaxislayer.selectAll('.' + ya._id + 'tick3').remove();
             plotinfo.xaxislayer.selectAll('.' + xa._id + 'divider').remove();
             plotinfo.yaxislayer.selectAll('.' + ya._id + 'divider').remove();
+            plotinfo.xaxislayer.selectAll('.' + xa._id + 'divider2').remove();
+            plotinfo.yaxislayer.selectAll('.' + ya._id + 'divider2').remove();
 
             if(plotinfo.gridlayer) plotinfo.gridlayer.selectAll('path').remove();
             if(plotinfo.zerolinelayer) plotinfo.zerolinelayer.selectAll('path').remove();
@@ -1706,7 +1709,7 @@ axes.drawOne = function(gd, ax, opts) {
     }
 
     var gridVals = ax._gridVals = valsClipped;
-    var dividerVals = getDividerVals(ax, vals);
+    var dividerVals = getDividerVals(ax, vals, 1);
 
     if(!fullLayout._hasOnlyLargeSploms) {
         // keep track of which subplots (by main conteraxis) we've already
@@ -1814,33 +1817,41 @@ axes.drawOne = function(gd, ax, opts) {
         var labelLength = 0;
         var pad = {x: 2, y: 10}[axLetter];
         var sgn = tickSigns[2] * (ax.ticks === 'inside' ? -1 : 1);
+        var maxLevel = countCategories(vals);
 
-        seq.push(function() {
-            labelLength += getLabelLevelSpan(ax, axId + 'tick') + pad;
-            labelLength += ax._tickAngles[axId + 'tick'] ? ax.tickfont.size * LINE_SPACING : 0;
+        for (var level = 2; level <= maxLevel; level++) {
+            (function (level) {
+                var levelLabelLength = labelLength;
 
-            return axes.drawLabels(gd, ax, {
-                vals: getSecondaryLabelVals(ax, vals),
-                layer: mainAxLayer,
-                cls: axId + 'tick2',
-                repositionOnUpdate: true,
-                secondary: true,
-                transFn: transFn,
-                labelFns: axes.makeLabelFns(ax, mainLinePosition + labelLength * sgn)
-            });
-        });
+                seq.push(function () {
+                    labelLength += getLabelLevelSpan(ax, axId + 'tick') + pad;
+                    labelLength += ax._tickAngles[axId + 'tick'] ? ax.tickfont.size * LINE_SPACING : 0;
+                    levelLabelLength = labelLength;
 
-        seq.push(function() {
-            labelLength += getLabelLevelSpan(ax, axId + 'tick2');
-            ax._labelLength = labelLength;
+                    return axes.drawLabels(gd, ax, {
+                        vals: getSecondaryLabelVals(ax, vals, maxLevel - level),
+                        layer: mainAxLayer,
+                        cls: axId + 'tick' + level,
+                        repositionOnUpdate: true,
+                        secondary: true,
+                        transFn: transFn,
+                        labelFns: axes.makeLabelFns(ax, mainLinePosition + labelLength * sgn)
+                    });
+                });
 
-            return drawDividers(gd, ax, {
-                vals: dividerVals,
-                layer: mainAxLayer,
-                path: axes.makeTickPath(ax, mainLinePosition, sgn, labelLength),
-                transFn: transFn
-            });
-        });
+                seq.push(function () {
+                    levelLabelLength += getLabelLevelSpan(ax, axId + 'tick' + level);
+                    ax._labelLength = levelLabelLength;
+
+                    return drawDividers(gd, ax, {
+                        vals: getDividerVals(ax, vals, maxLevel - level),
+                        layer: mainAxLayer,
+                        path: axes.makeTickPath(ax, mainLinePosition, sgn, levelLabelLength),
+                        transFn: transFn
+                    }, level);
+                });
+            })(level);
+        }
     }
 
     function extendRange(range, newRange) {
@@ -2047,27 +2058,35 @@ function getBoundaryVals(ax, vals) {
     return out;
 }
 
-function getSecondaryLabelVals(ax, vals) {
+function countCategories(vals) {
+    return vals[0].categories.length;
+}
+
+function getSecondaryLabelVals(ax, vals, level) {
     var out = [];
-    var lookup = {};
 
-    for(var i = 0; i < vals.length; i++) {
-        var d = vals[i];
-        if(lookup[d.text2]) {
-            lookup[d.text2].push(d.x);
-        } else {
-            lookup[d.text2] = [d.x];
+    for (var i = 0; i < vals.length;) {
+        var text = vals[i].categories[level];
+        var elements = [];
+
+        while (i < vals.length) {
+            var d = vals[i];
+
+            if (d.categories[level] === text) {
+                elements.push(d.x);
+                i++;
+            } else {
+                break;
+            }
         }
-    }
 
-    for(var k in lookup) {
-        out.push(tickTextObj(ax, Lib.interp(lookup[k], 0.5), k));
+        out.push(tickTextObj(ax, Lib.interp(elements, 0.5), text));
     }
 
     return out;
 }
 
-function getDividerVals(ax, vals) {
+function getDividerVals(ax, vals, level) {
     var out = [];
     var i, current;
 
@@ -2083,10 +2102,16 @@ function getDividerVals(ax, vals) {
     if(ax.showdividers && vals.length) {
         for(i = 0; i < vals.length; i++) {
             var d = vals[i];
-            if(d.text2 !== current) {
+
+            if (!d.categories) {
+                continue;
+            }
+
+            if (d.categories[level] !== current) {
                 _push(d, 0);
             }
-            current = d.text2;
+
+            current = d.categories[level];
         }
         _push(vals[i - 1], 1);
     }
@@ -2652,8 +2677,8 @@ axes.drawLabels = function(gd, ax, opts) {
  * - {fn} path
  * - {fn} transFn
  */
-function drawDividers(gd, ax, opts) {
-    var cls = ax._id + 'divider';
+function drawDividers(gd, ax, opts, level) {
+    var cls = ax._id + 'divider' + level;
     var vals = opts.vals;
 
     var dividers = opts.layer.selectAll('path.' + cls)

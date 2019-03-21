@@ -149,11 +149,16 @@ module.exports = function setConvert(ax, fullLayout) {
 
     function setMultiCategoryIndex(arrayIn, len) {
         var arrayOut = new Array(len);
+        var arrayInLength = arrayIn.length;
 
-        for(var i = 0; i < len; i++) {
-            var v0 = (arrayIn[0] || [])[i];
-            var v1 = (arrayIn[1] || [])[i];
-            arrayOut[i] = getCategoryIndex([v0, v1]);
+        for (var i = 0; i < len; i++) {
+            var out = [];
+
+            for (var y = 0; y < arrayInLength; y++) {
+                out.push((arrayIn[y] || [])[i]);
+            }
+
+            arrayOut[i] = getCategoryIndex(out);
         }
 
         return arrayOut;
@@ -323,7 +328,8 @@ module.exports = function setConvert(ax, fullLayout) {
             }
 
             // [ [cnt, {$cat: index}], for 1,2 ]
-            var seen = [[0, {}], [0, {}]];
+            var seen = [];
+
             // [ [arrayIn[0][i], arrayIn[1][i]], for i .. N ]
             var list = [];
 
@@ -334,19 +340,32 @@ module.exports = function setConvert(ax, fullLayout) {
                     var arrayIn = trace[axLetter];
                     var len = trace._length || Lib.minRowLength(arrayIn);
 
-                    if(isArrayOrTypedArray(arrayIn[0]) && isArrayOrTypedArray(arrayIn[1])) {
-                        for(j = 0; j < len; j++) {
-                            var v0 = arrayIn[0][j];
-                            var v1 = arrayIn[1][j];
+                    var b = !(new Array(arrayIn.length))
+                        .map((value, level) => isArrayOrTypedArray(arrayIn[level]))
+                        .includes(false)
 
-                            if(isValidCategory(v0) && isValidCategory(v1)) {
-                                list.push([v0, v1]);
+                    if (b) {
+                        for (j = 0; j < len; j++) {
+                            var values = [];
+                            var isValid = true;
 
-                                if(!(v0 in seen[0][1])) {
-                                    seen[0][1][v0] = seen[0][0]++;
-                                }
-                                if(!(v1 in seen[1][1])) {
-                                    seen[1][1][v1] = seen[1][0]++;
+                            for (var level = 0; level < arrayIn.length; level++) {
+                                var value = arrayIn[level][j];
+                                values.push(value);
+                                isValid = isValid && isValidCategory(value);
+                            }
+
+                            if (isValid) {
+                                list.push(values);
+
+                                for (var level = 0; level < values.length; level++) {
+                                    var value = values[level];
+
+                                    if (!seen[level]) {
+                                        seen[level] = [0, {}];
+                                    }
+
+                                    seen[level][1][value] = seen[level][0]++;
                                 }
                             }
                         }
@@ -354,13 +373,17 @@ module.exports = function setConvert(ax, fullLayout) {
                 }
             }
 
-            list.sort(function(a, b) {
-                var ind0 = seen[0][1];
-                var d = ind0[a[0]] - ind0[b[0]];
-                if(d) return d;
+            list.sort(function (a, b) {
+                for (var level = 0; level < seen.length; level++) {
+                    var ind = seen[level][1];
+                    var d = ind[a[level]] - ind[b[level]];
 
-                var ind1 = seen[1][1];
-                return ind1[a[1]] - ind1[b[1]];
+                    if (d) {
+                        return d;
+                    }
+                }
+
+                return 0;
             });
 
             for(i = 0; i < list.length; i++) {
