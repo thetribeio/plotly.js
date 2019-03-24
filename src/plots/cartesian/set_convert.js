@@ -340,9 +340,9 @@ module.exports = function setConvert(ax, fullLayout) {
                     var arrayIn = trace[axLetter];
                     var len = trace._length || Lib.minRowLength(arrayIn);
 
-                    var b = !(new Array(arrayIn.length))
-                        .map((value, level) => isArrayOrTypedArray(arrayIn[level]))
-                        .includes(false)
+                    var b = !arrayIn
+                        .map((value) => isArrayOrTypedArray(value))
+                        .includes(false);
 
                     if (b) {
                         for (j = 0; j < len; j++) {
@@ -376,7 +376,9 @@ module.exports = function setConvert(ax, fullLayout) {
             list.sort(function (a, b) {
                 for (var level = 0; level < seen.length; level++) {
                     var ind = seen[level][1];
-                    var d = ind[a[level]] - ind[b[level]];
+                    var d = ax._input.resort
+                        ? ax._input.resort(a[level], b[level])
+                        : ind[a[level]] - ind[b[level]];
 
                     if (d) {
                         return d;

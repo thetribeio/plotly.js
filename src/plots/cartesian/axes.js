@@ -1616,14 +1616,8 @@ axes.draw = function(gd, arg, opts) {
 
             plotinfo.xaxislayer.selectAll('.' + xa._id + 'tick').remove();
             plotinfo.yaxislayer.selectAll('.' + ya._id + 'tick').remove();
-            plotinfo.xaxislayer.selectAll('.' + xa._id + 'tick2').remove();
-            plotinfo.yaxislayer.selectAll('.' + ya._id + 'tick2').remove();
-            plotinfo.xaxislayer.selectAll('.' + xa._id + 'tick3').remove();
-            plotinfo.yaxislayer.selectAll('.' + ya._id + 'tick3').remove();
             plotinfo.xaxislayer.selectAll('.' + xa._id + 'divider').remove();
             plotinfo.yaxislayer.selectAll('.' + ya._id + 'divider').remove();
-            plotinfo.xaxislayer.selectAll('.' + xa._id + 'divider2').remove();
-            plotinfo.yaxislayer.selectAll('.' + ya._id + 'divider2').remove();
 
             if(plotinfo.gridlayer) plotinfo.gridlayer.selectAll('path').remove();
             if(plotinfo.zerolinelayer) plotinfo.zerolinelayer.selectAll('path').remove();
@@ -2059,7 +2053,7 @@ function getBoundaryVals(ax, vals) {
 }
 
 function countCategories(vals) {
-    return vals[0].categories.length;
+    return (vals[0] && vals[0].categories) ? vals[0].categories.length : 0;
 }
 
 function getSecondaryLabelVals(ax, vals, level) {
@@ -2492,6 +2486,7 @@ axes.drawLabels = function(gd, ax, opts) {
 
     tickLabels.enter().append('g')
         .classed(cls, 1)
+        .classed(axId + 'tick', 1)
         .append('text')
             // only so tex has predictable alignment that we can
             // alter later
@@ -2689,6 +2684,7 @@ function drawDividers(gd, ax, opts, level) {
     dividers.enter().insert('path', ':first-child')
         .classed(cls, 1)
         .classed('crisp', 1)
+        .classed(ax._id + 'divider', 1)
         .call(Color.stroke, ax.dividercolor)
         .style('stroke-width', Drawing.crispRound(gd, ax.dividerwidth, 1) + 'px');
 
